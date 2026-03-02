@@ -3,7 +3,7 @@ import { AnimatePresence } from 'motion/react';
 import { Welcome } from './components/Welcome';
 import { Quiz } from './components/Quiz';
 import { Result } from './components/Result';
-import { questions } from './data/questions';
+import { questions, Question } from './data/questions';
 import { mbtiResults, MBTIResult } from './data/results';
 
 type Step = 'welcome' | 'quiz' | 'result';
@@ -28,8 +28,16 @@ export default function App() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [resultData, setResultData] = useState<ResultData | null>(null);
+  const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>([]);
 
   const handleStart = () => {
+    // Fisher-Yates shuffle to randomize questions
+    const shuffled = [...questions];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    setShuffledQuestions(shuffled);
     setStep('quiz');
     setCurrentQuestionIndex(0);
     setAnswers([]);
@@ -37,13 +45,20 @@ export default function App() {
   };
 
   const handleAnswer = (value: string, weight: number) => {
-    const newAnswers = [...answers, { value, weight }];
+    const newAnswers = [...answers];
+    newAnswers[currentQuestionIndex] = { value, weight };
     setAnswers(newAnswers);
 
-    if (currentQuestionIndex < questions.length - 1) {
+    if (currentQuestionIndex < shuffledQuestions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
       calculateResult(newAnswers);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
     }
   };
 
@@ -87,13 +102,14 @@ export default function App() {
       <main className="container mx-auto">
         <AnimatePresence mode="wait">
           {step === 'welcome' && <Welcome key="welcome" onStart={handleStart} />}
-          {step === 'quiz' && (
+          {step === 'quiz' && shuffledQuestions.length > 0 && (
             <Quiz
               key="quiz"
-              question={questions[currentQuestionIndex]}
+              question={shuffledQuestions[currentQuestionIndex]}
               currentIndex={currentQuestionIndex}
-              totalQuestions={questions.length}
+              totalQuestions={shuffledQuestions.length}
               onAnswer={handleAnswer}
+              onPrevious={handlePrevious}
             />
           )}
           {step === 'result' && resultData && (

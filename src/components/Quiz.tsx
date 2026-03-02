@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { ChevronLeft } from 'lucide-react';
 import { Question } from '../data/questions';
 
 interface QuizProps {
@@ -8,31 +9,74 @@ interface QuizProps {
   currentIndex: number;
   totalQuestions: number;
   onAnswer: (value: string, weight: number) => void;
+  onPrevious: () => void;
 }
 
-export function Quiz({ question, currentIndex, totalQuestions, onAnswer }: QuizProps) {
+export function Quiz({ question, currentIndex, totalQuestions, onAnswer, onPrevious }: QuizProps) {
   const progress = ((currentIndex + 1) / totalQuestions) * 100;
 
+  // Determine ambient color based on the current question's dimension
+  const ambientColor = useMemo(() => {
+    switch (question.dimension) {
+      case 'E/I': return 'bg-blue-400/20';
+      case 'S/N': return 'bg-emerald-400/20';
+      case 'T/F': return 'bg-purple-400/20';
+      case 'J/P': return 'bg-amber-400/20';
+      default: return 'bg-indigo-400/20';
+    }
+  }, [question.dimension]);
+
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 py-8 min-h-[80vh] flex flex-col">
-      {/* Progress Bar */}
-      <div className="mb-8">
-        <div className="flex justify-between text-sm text-gray-500 mb-2 font-medium">
-          <span>进度</span>
-          <span>{currentIndex + 1} / {totalQuestions}</span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+    <div className="w-full max-w-2xl mx-auto px-4 py-8 min-h-[80vh] flex flex-col relative">
+      
+      {/* Ambient Background Glow */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden flex items-center justify-center">
+        <AnimatePresence mode="popLayout">
           <motion.div
-            className="bg-indigo-600 h-2.5 rounded-full"
-            initial={{ width: `${(currentIndex / totalQuestions) * 100}%` }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.3 }}
+            key={ambientColor}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.2 }}
+            transition={{ duration: 1.5, ease: "easeInOut" }}
+            className={`absolute w-[120vw] h-[120vw] md:w-[50vw] md:h-[50vw] rounded-full ${ambientColor} blur-[80px] md:blur-[120px]`}
           />
+        </AnimatePresence>
+      </div>
+
+      {/* Top Navigation / Progress */}
+      <div className="mb-8 flex items-center justify-between relative z-10">
+        <div className="w-12">
+          {currentIndex > 0 && (
+            <button 
+              onClick={onPrevious}
+              className="flex items-center justify-center w-10 h-10 rounded-full bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-indigo-600 transition-colors shadow-sm"
+              aria-label="上一题"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          )}
         </div>
+        
+        <div className="flex-1 px-4">
+          <div className="flex justify-between text-xs text-gray-400 mb-2 font-medium uppercase tracking-wider">
+            <span>Progress</span>
+            <span>{currentIndex + 1} / {totalQuestions}</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+            <motion.div
+              className="bg-indigo-600 h-2 rounded-full"
+              initial={{ width: `${(currentIndex / totalQuestions) * 100}%` }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.3 }}
+            />
+          </div>
+        </div>
+        
+        <div className="w-12"></div> {/* Spacer for centering */}
       </div>
 
       {/* Question Area */}
-      <div className="flex-1 flex flex-col justify-center">
+      <div className="flex-1 flex flex-col justify-center relative z-10">
         <AnimatePresence mode="wait">
           <motion.div
             key={question.id}
